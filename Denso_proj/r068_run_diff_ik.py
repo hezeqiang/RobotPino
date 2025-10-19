@@ -1,7 +1,6 @@
 import argparse
 
 from omni.isaac.lab.app import AppLauncher
-from quaternion_ope import quat_tensor_to_rot_matrix
 import modern_robotics as MR
 
 # add argparse arguments
@@ -26,7 +25,7 @@ simulation_app = app_launcher.app
 
 
 import torch
-import get_all_prim_from_World
+from omni.isaac.lab.assets.articulation.articulation import Articulation
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import AssetBaseCfg
 from omni.isaac.lab.controllers import DifferentialIKController, DifferentialIKControllerCfg
@@ -37,6 +36,7 @@ from omni.isaac.lab.scene import InteractiveScene, InteractiveSceneCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 from omni.isaac.lab.utils.math import subtract_frame_transforms
+
 
 ##
 # Pre-defined configs

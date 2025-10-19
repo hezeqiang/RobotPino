@@ -28,7 +28,6 @@ simulation_app = app_launcher.app
 
 
 import torch
-import get_all_prim_from_World
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import AssetBaseCfg
 from omni.isaac.lab.controllers import DifferentialIKController, DifferentialIKControllerCfg
@@ -105,7 +104,6 @@ def main():
     # ['/World/envs/env_0', '/World/envs/env_1']
     print("scene keys:",scene.keys(),"\n") # >>> ['terrain', 'robot', 'ground', 'dome_light', 'table']
 
-    get_all_prim_from_World.get_all_prim_from_World()
 
 
     for attr_name, attr_value in scene.__dict__.items():

@@ -29,6 +29,7 @@ simulation_app = app_launcher.app
 
 
 import torch
+from omni.isaac.lab.assets.articulation.articulation import Articulation
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import AssetBaseCfg
 from omni.isaac.lab.controllers import DifferentialIKController, DifferentialIKControllerCfg
@@ -46,7 +47,6 @@ from omni.isaac.core.articulations import ArticulationView
 # Pre-defined configs
 ##
 from franka import FRANKA_PANDA_HIGH_PD_CFG
-import tool_get_all_prim_from_World
 
 # create table scene config
 @configclass
@@ -108,8 +108,6 @@ def main():
     # ['/World/envs/env_0', '/World/envs/env_1']
     print("scene keys:",scene.keys(),"\n") # >>> ['terrain', 'robot', 'ground', 'dome_light', 'table']
 
-
-    tool_get_all_prim_from_World.get_all_prim_from_World()
 
     print("scene articulation:",scene.articulations)
     print("scene namespace:",scene.env_ns)

@@ -78,7 +78,12 @@ for i in range(joint_number):
 # print(home_config_M_Space.dtype)
 
 # MR.ForwardDynamics
-Thetalist =np.array([0, PI/3, PI/4, 0, PI/2, 0],dtype=np.float32)
+# Thetalist =np.array([0, PI/3, PI/4, 0, PI/2, 0],dtype=np.float32)
+Thetalist =np.array([0, 0, 0, 0, 0, 0],dtype=np.float32) # home position
+# [[1.00000000e+00 0.00000000e+00 0.00000000e+00 9.99999978e-03]
+#  [0.00000000e+00 1.00000000e+00 0.00000000e+00 2.69699267e-08]
+#  [0.00000000e+00 0.00000000e+00 1.00000000e+00 1.15500009e+00]
+#  [0.00000000e+00 0.00000000e+00 0.00000000e+00 1.00000000e+00]]
 T_end_effector= MR.FKinSpace(home_config_Space_M[:,20:24], home_Screw_space_omega_v, Thetalist)
 print(T_end_effector)
 # [[-9.65925802e-01  0.00000000e+00 -2.58819137e-01  6.37334262e-01]

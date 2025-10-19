@@ -20,12 +20,15 @@ from omni.isaac.lab.utils.assets import ISAACLAB_NUCLEUS_DIR
 
 R068_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=r"c:\Users\13306\OneDrive\Coding_Proj\issaaclab140\HEcode\Denso_proj\r068.usd",
+        usd_path=r"Denso_proj\r068.usd",
+
         activate_contact_sensors=False,
+        
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
             max_depenetration_velocity=5.0,
         ),
+
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
             enabled_self_collisions=True, solver_position_iteration_count=8, solver_velocity_iteration_count=0
         ),

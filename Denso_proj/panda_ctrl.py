@@ -2,7 +2,7 @@ import numpy as np
 import time
 import modern_robotics as MR
 import math
-from kinematics_from_description.src.kinematics_from_description.RobotModel import RobotModel as RM
+from Denso_proj.RobotModel import RobotModel as RM
 PI = math.pi
 
 panda_robot_urdf_file =r"C:\Users\13306\OneDrive\Coding_Proj\issaaclab140\HEcode\franka_description\robots\panda_arm_hand_merged_principal_axes.urdf"

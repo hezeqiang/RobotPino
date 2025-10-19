@@ -22,6 +22,7 @@ import argparse
 
 from omni.isaac.lab.app import AppLauncher
 
+
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Tutorial on using the differential IK controller.")
 parser.add_argument("--robot", type=str, default="franka_panda", help="Name of the robot.")
@@ -31,14 +32,16 @@ AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
 args_cli = parser.parse_args()
 
-# launch omniverse app
+# launch omniverse app and then import 
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
 import torch
-
+import numpy as np
+import pinocchio as pin
+from omni.isaac.lab.assets.articulation.articulation import Articulation
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import AssetBaseCfg
 from omni.isaac.lab.controllers import DifferentialIKController, DifferentialIKControllerCfg
@@ -49,7 +52,7 @@ from omni.isaac.lab.scene import InteractiveScene, InteractiveSceneCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 from omni.isaac.lab.utils.math import subtract_frame_transforms
-
+from utili.tool_quaternion_ope import posquat_to_se3
 ##
 # Pre-defined configs
 ##
@@ -86,13 +89,34 @@ class TableTopSceneCfg(InteractiveSceneCfg):
     else:
         raise ValueError(f"Robot {args_cli.robot} is not supported. Valid: franka_panda, ur10")
 
+def se3_to_SE3(vec): #[q,w]
+    """
+    Convert a 6D vector (translation + rotation vector) into a pinocchio.SE3 object.
+    
+    Parameters:
+        vec: np.array of shape (6,), where vec[:3] is translation and vec[3:] is a rotation vector.
+    
+    Returns:
+        se3: a pinocchio.SE3 object.
+    """
+    # Extract translation and rotation vector
+    translation = vec[:3]
+    rot_vec = vec[3:]
+    
+    # Convert the rotation vector (in so(3)) to a rotation matrix using the exponential map.
+    # Note: pin.SO3.Exp returns an SO3 object, and we take its matrix() for a 3x3 rotation matrix.
+    R = pin.exp3(rot_vec)
+    
+    return pin.SE3(R, translation)
 
-def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
+
+def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, robot:Articulation):
     """Runs the simulation loop."""
     # Extract scene entities
     # note: we only do this here for readability.
-    robot = scene["robot"]
-    print(robot)
+    # robot = scene["robot"]
+    print("robot: ",robot,"\n") # >>> Robot
+
 
     # Create controller
     diff_ik_cfg = DifferentialIKControllerCfg(command_type="pose", use_relative_mode=False, ik_method="dls")
@@ -150,8 +174,22 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
                   "root_pose_w: ",root_pose_w,"\n"
                   "relateve_ee_pose_w: ",ee_pose_w[:,0:3]-root_pose_w[:,0:3],"\n"
                   "ik_commands: ",ik_commands[:,0:3],"\n")
+    
 
+            ee_pose_w = robot.data.body_link_state_w[:, robot_entity_cfg.body_ids[0], 0:7].detach().cpu().numpy() # world frame
+            root_pose_w = robot.data.root_link_state_w[:, 0:7].detach().cpu().numpy()
+            ee_pose_se3_w = posquat_to_se3(ee_pose_w[0]) # evn_num * 6 [q,w]
+            root_pose_se3_w = posquat_to_se3(root_pose_w[0])
 
+            ee_pose_SE3_w = se3_to_SE3(ee_pose_se3_w)
+            root_pose_SE3_w = se3_to_SE3(root_pose_se3_w)
+
+            root_pose_SE3_w_inv = root_pose_SE3_w.inverse()
+            ee_pose_SE3_re = root_pose_SE3_w_inv * ee_pose_SE3_w
+
+            # print(ee_pose_SE3_re)
+
+            print("Desired joint position target:" , robot.data.joint_pos_target)
             # reset time
             count = 0
             # reset joint state
@@ -180,6 +218,11 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
             )
             # compute the joint commands
             joint_pos_des = diff_ik_controller.compute(ee_pos_b, ee_quat_b, jacobian, joint_pos)
+
+            # default_q = np.array([0, -0.569, 0, -2.810, 0, 3.037, 0.741, 0.04, 0.04]) 
+            # default_q = np.array([0, 0, 0, 0, 0, 3.037, 0, 0, 0]) 
+            # joint_pos_des = torch.tensor(np.array([default_q[0:7]] * scene.num_envs), dtype=torch.float, device=sim.device)
+            # print(joint_pos_des)
 
         # apply actions
         robot.set_joint_position_target(joint_pos_des, joint_ids=robot_entity_cfg.joint_ids)
@@ -230,8 +273,9 @@ def main():
     sim.reset()
     # Now we are ready!
     print("[INFO]: Setup complete...")
+    robot = scene["robot"]
     # Run the simulator
-    run_simulator(sim, scene)
+    run_simulator(sim, scene,robot)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,762 @@
+\documentclass[10pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{lightgray}{gray}{0.95}
+\lstset{
+  backgroundcolor=\color{lightgray},
+  basicstyle=\ttfamily,
+  columns=fullflexible,
+  breaklines=true
+}
+
+\begin{document}
+
+\title{Pinocchio Functions}
+\author{HE}
+\date{}
+\maketitle
+
+\section*{Left upper script is the coordinate frame}
+\section*{In Pinocchio, inertia of link is attached to the joint frame by parallel axis theorem, exhibiting non-zero off-diagonal elements.}
+
+\section*{$\tau = M(\theta) \ddot{\theta}+C(\theta,\dot{\theta})\dot{\theta} + g(\theta) = M(\theta) \ddot{\theta} + h(\theta,\dot{\theta})$
+, $M(\theta) = M(\theta)^T, \dot{M}(\theta)-2C(\theta,\dot{\theta}) = 0$}
+
+
+\section*{Action $T$ on SE3, 
+Action  $\text{Ad}_T$ on se3, 
+Motion action $\text{ad}_V$ (adjoint matrix working on se3)}
+\section*{$\text{ad}_V$ appears due to : Newton-Euler unified formulation:
+\[
+\mathcal{F}_b 
+= 
+\mathcal{G}_b\,\dot{\mathcal{V}}_b
+-
+\bigl[\mathrm{ad}_{\mathcal{V}_b}\bigr]^{T}\,\mathcal{G}_b\,\mathcal{V}_b.
+\]
+, time derivation: \[
+\frac{d}{dt} \,\mathrm{Ad}_{T_{i,i-1}(t)} 
+\;=\;
+-\,\mathrm{ad}_{\,V_{i}} \times \mathrm{Ad}_{T_{i,i-1}(t)}.
+\]}
+\section*{$\phi$ : $\boldsymbol{Momentum}$ in SE3, Power =  $V^T *\phi/2$}
+\section*{$R$  : 3D rotation matrix}
+\section*{$Y$ inertia matrix}
+\section*{$V = [v,w]$ se3}
+\section*{$\alpha$  spatial  acceleration in se3}
+
+
+\section*{Attribute: SE3, Motion, Force, Inertia, Joint}
+
+
+\begin{itemize}
+    \item \textbf{SE3 Class:}
+\begin{itemize}
+    \item \texttt{T.rotation} and 
+    \item \texttt{T.translation} let you access the individual components of the transformation.
+    
+    \item \texttt{T.inverse()} computes the inverse of the transformation. The overloaded 
+    \item \texttt{*} operator allows you to compose transformations, as shown with \texttt{T * T\_inv}.
+    
+    \item \texttt{T.act(point)} applies the transformation to a 3D point. 
+    \item \texttt{T.actInv(point)} applies the inverse transformation (useful for recovering the original point).
+    
+    \item \texttt{pin.SE3.Exp(xi)} computes an SE3 transformation from a 6D twist vector using the exponential map. 
+    \item \texttt{T\_exp.log()} returns the twist vector (logarithm map) corresponding to the transformation.
+\end{itemize}
+
+    \item \textbf{Motion Class:}
+    \begin{itemize}
+        \item \texttt{pin.Motion(angular, linear)} creates a motion (twist) from its angular and linear velocity components.
+        \item \texttt{M.vector} returns the full 6D vector representation.
+        \item \texttt{M.angular} and \texttt{M.linear} provide access to the angular and linear parts, respectively.
+        \item The \texttt{cross()} method computes the spatial cross product between two motion vectors.
+        \item \texttt{act} Action of a motion set on a force object. The input motion set is represented by a 6xN matrix whose each column represent a spatial motion. The output force set is represented by a 6xN matrix whose each column represent a spatial force.
+        \item \texttt{inertiaAction} 	Action of an Inertia matrix on a set of motions, represented by a 6xN matrix whose columns represent a spatial motion. out = spatial force (momentum)
+        \item \texttt{motionAction}  Action of a motion on a set of motions, represented by a 6xN matrix whose columns represent a spatial motion. $out = \text{ad}_{V1}^{-1} V$, adjoint matrix $\text{ad}_V$
+        \item \texttt{se3Action}	SE3 action on a set of motions, represented by a 6xN matrix whose column represent a spatial motion. $out = \text{Ad}_G V$.
+        \item \texttt{se3ActionInverse} 	Inverse SE3 action on a set of motions, represented by a 6xN matrix whose column represent a spatial motion. $out = \text{Ad}_G^{-1} V$, $G$:ground
+
+        
+    \end{itemize}
+    
+    \item \textbf{Force Class:}
+    \begin{itemize}
+        \item \texttt{pin.Force(torque, force)} constructs a spatial force vector with the given torque and force components.
+        \item \texttt{F.vector} returns the full 6D vector representation.
+        \item \texttt{F.torque} and \texttt{F.force} provide access to the torque and force parts, respectively.
+        \item \texttt{se3Action} and \texttt{se3ActionInverse} SE3 action on a set of forces, represented by a 6xN matrix whose each column represent a spatial force. $out = \text{Ad}_G F$, $out = \text{Ad}_G^{-1} F$, $G$:ground
+        \item \texttt{motionAction} Action of a motion on a set of forces, represented by a 6xN matrix whose each column represent a spatial force. $out = \text{ad}_V^{-1} F$, adjoint matrix $\text{ad}_V$
+    \end{itemize}
+
+    \item \textbf{Inertia Class:}
+    \begin{itemize}
+        \item \texttt{.mass()} mass 
+        \item \texttt{.lever()} position of CoM representation.
+        \item \texttt{.inertia()} inertia matrix
+
+
+        \item \textbf{vtiv:}\\
+        Computes the quadratic form of motion and inertial forces, which is twice the 
+        kinetic energy. Implementation details are provided by derived classes.
+        \[
+            \text{out} = V^{T} M V.
+        \]
+        
+        \item \textbf{variation:}\\
+        The first-order derivative of the spatial inertia matrix. Implementation 
+        details are provided by derived classes.
+        \[
+            \text{out} = \mathrm{ad}'_{V} \, M \;-\; M\,\mathrm{ad}_{V},
+        \]
+        which can be seen as the difference between the \texttt{vxi} and \texttt{ivx} 
+        functions.
+        
+        \item \textbf{vxi:}\\
+        The left-multiplication semidirect matrix of the six-dimensional motion 
+        (left tangent space) for the spatial inertia matrix, used to compute the 
+        derivative of the spatial inertia matrix. Implementation details are 
+        provided by derived classes.
+        \[
+            \text{out} = \mathrm{ad}'_{V}\,M.
+        \]
+        
+        \item \textbf{ivx:}\\
+        The right-multiplication semidirect matrix of the six-dimensional motion 
+        (right tangent space) for the spatial inertia matrix, used to compute the 
+        derivative of the spatial inertia matrix. Implementation details are 
+        provided by derived classes.
+        \[
+            \text{out} = M\,\mathrm{ad}_{V}.
+        \]
+        
+        \item \textbf{se3Action:}\\
+        Transforms the spatial inertia matrix from the body coordinate system to 
+        the absolute coordinate system. Implementation details are provided by 
+        derived classes.
+        \[
+            m_{2} = m_{1}, 
+            \quad p_{2} = R\,p_{1} + P, 
+            \quad I_{2} = R\,I_{1}\,R^{T}.
+        \]
+        
+        \end{itemize}
+            
+\end{itemize}
+
+
+\section*{Pinocchio Frame Types}
+
+\begin{itemize}
+  \item \textbf{ReferenceFrame.LOCAL}: The origin is expressed in the local frame, and the linear and angular velocities of the frame are represented in the local frame.
+  \item \textbf{ReferenceFrame.WORLD}: The origin coincides with the world frame, and the velocities are projected in the basis of the world frame, representing the spatial and angular velocities of the frame in the world frame.
+  \item \textbf{ReferenceFrame.LOCAL\_WORLD\_ALIGNED}: origin coinciding with the local frame, but the XYZ axes are aligned with the world frame. In this way, the velocities are projected in the basis of the world frame, representing the linear and angular velocities of the frame in the world frame.
+\end{itemize}
+
+\section*{Important Pinocchio Functions}
+\begin{itemize}
+    \item \textbf{pinocchio::computeAllTerms}: Computes all the kinematic and dynamic quantities of the robot model, including forward kinematics, Jacobians, and inertia matrices.
+    \item \textbf{pinocchio::forwardKinematics}: Computes the positions and orientations of all joints by propagating the kinematic chain from the base using the given joint configuration (and optionally velocities and accelerations).
+    \item \textbf{pinocchio::crba}: Implements the Composite Rigid Body Algorithm to compute the joint-space mass (inertia) matrix of the robot, which is used in dynamics calculations.
+    \item \textbf{pinocchio::ccrba}: Computes the centroidal dynamics quantities of the robot. In particular, it’s used to efficiently compute the momentum (both linear and angular) of the robot and provides the centroidal momentum matrix, which is valuable for tasks related to balance and dynamic motions.
+    \item \textbf{pinocchio::nonLinearEffects}: Calculates the combined effects of gravity, Coriolis, and centrifugal forces acting on the robot, given the current configuration and velocity.
+    \item \textbf{pinocchio::computeJointJacobians}: Computes the Jacobian matrices for all joints, mapping joint velocities to the spatial velocities of the corresponding bodies.
+    \item \textbf{pinocchio::centerOfMass}: Determines the overall center of mass of the robot model by aggregating the contributions of all bodies based on their masses and positions.
+    \item \textbf{pinocchio::jacobianCenterOfMass}: Computes the Jacobian of the robot’s center of mass with respect to its joint coordinates, useful for tasks like balance and motion planning.
+    \item \textbf{pinocchio::kineticEnergy}: Computes the total kinetic energy of the robot given its mass distribution and joint velocity configuration.
+    \item \textbf{pinocchio::potentialEnergy}: Calculates the potential energy of the robot, typically due to gravity, based on the configuration and the positions of its centers of mass.
+\end{itemize}
+
+\section*{Rigid Transformation Setup}
+
+We consider two coordinate frames, \(\{A\}\) and \(\{B\}\). A point \(\mathbf{p}\) expressed in frame \(\{B\}\) is denoted by \( {}^{B}\mathbf{p}\).  Its coordinates in frame \(\{A\}\) are given by \( {}^{A}\mathbf{p}\).  A rigid transform from frame \(\{B\}\) to \(\{A\}\) can be written:
+
+\[
+{}^{A}\mathbf{p} \;=\;
+{}^{A}\mathbf{R}_{B}\;\, {}^{B}\mathbf{p}
+\;+\;
+{}^{A}\mathbf{A}_{B},
+\]
+where \( {}^{A}\mathbf{R}_{B} \in SO(3)\) is the \(3 \times 3\) rotation from \(\{B\}\) to \(\{A\}\), and \( {}^{A}\mathbf{A}_{B}\in \mathbb{R}^{3}\) is the translation of the origin of \(\{B\}\) as seen from \(\{A\}\).
+
+\subsection*{Matrix Form}
+The above can be embedded in homogeneous coordinates, yielding a \(4\times 4\) matrix:
+\[
+{}^{A}\!M_{B}
+\;=\;
+\begin{bmatrix}
+{}^{A}\mathbf{R}_{B} & {}^{A}\mathbf{A}_{B}\\[6pt]
+\mathbf{0} & 1
+\end{bmatrix}
+\;\;.
+\]
+Then,
+\[
+{}^{A}\mathbf{p}_{h} 
+\;=\;
+{}^{A}\!M_{B}
+\; {}^{B}\mathbf{p}_{h},
+\]
+where \(\mathbf{p}_{h} = [\,p_x \; p_y \; p_z \; 1\,]^\top\) denotes homogeneous coordinates.
+
+\paragraph{Inverse Transform}
+Going from \(\{A\}\) back to \(\{B\}\) is given by
+\[
+{}^{B}\mathbf{p}
+\;=\;
+({}^{A}\!M_{B})^{-1} \; {}^{A}\mathbf{p}.
+\]
+In matrix form,
+\[
+{}^{B}\!M_{A}
+\;=\;
+\begin{bmatrix}
+({}^{A}\mathbf{R}_{B})^\top & -\,({}^{A}\mathbf{R}_{B})^\top\, {}^{A}\mathbf{A}_{B}\\[2pt]
+\mathbf{0} & 1
+\end{bmatrix}.
+\]
+(These expressions match the figure’s \({A}_{M_B}\) and \({B}_{M_A}\) blocks.)
+
+\subsection*{Relation to Pinocchio \texttt{SE3} Objects}
+
+In the \texttt{Pinocchio} library, a rigid transform is stored in an \texttt{SE3} object.  If
+\[
+\mathbf{R} = {}^{A}\mathbf{R}_{B}, 
+\quad
+\mathbf{p} = {}^{A}\mathbf{A}_{B},
+\]
+then
+
+\begin{lstlisting}[language=Python]
+import pinocchio
+M = pinocchio.SE3(R, p)
+\end{lstlisting}
+
+is exactly the matrix 
+\(\displaystyle
+{}^{A}\!M_{B}
+\)
+in homogeneous form.
+
+\subsection*{2.1 Transforming a 3D Point}
+To transform a \emph{point} in Pinocchio (3D vector),
+\[
+{}^{B}\mathbf{p} \;\mapsto\; {}^{A}\mathbf{p},
+\]
+you can call \texttt{M.act} (for a 3D point). In Python:
+
+\begin{lstlisting}[language=Python]
+import pinocchio
+
+# Rotation matrix R and translation p
+M = pinocchio.SE3(R, p)
+
+p_B = np.array([x_b, y_b, z_b])  # coordinates in frame B
+p_A = M.act(p_B)                 # coordinates in frame A
+\end{lstlisting}
+
+
+\begin{itemize}
+\item \textbf{Input:} 
+  \begin{itemize}
+    \item \(\mathbf{R}\) (3x3 rotation), \(\mathbf{p}\) (3D translation).
+    \item \(\mathbf{p}_B\) (the point in frame B).
+  \end{itemize}
+\item \textbf{Output:} \(\mathbf{p}_A\), the point in frame A.
+\end{itemize}
+
+\subsection*{2.2 Inverse Transform}
+If you have a point \({}^{A}\mathbf{p}\) in frame \(\{A\}\) and wish to express it in \(\{B\}\), call:
+\begin{lstlisting}[language=Python]
+p_B = M.actInv(p_A)
+\end{lstlisting}
+which performs \(\mathbf{M}^\top(\mathbf{p}_A)\).
+
+\subsection*{Featherstone-Style Notation}
+In spatial-algebra contexts (Featherstone’s notation), one often sees:
+\[
+E 
+\;=\;
+{}^{B}\mathbf{R}_{A}
+\;=\;
+({}^{A}\mathbf{R}_{B})^\top,
+\qquad
+r 
+\;=\;
+{}^{A}\mathbf{A}_{B}.
+\]
+Then the homogeneous transforms become
+\[
+{}^{B}\!M_{A}
+\;=\;
+\begin{bmatrix}
+E & -\,E\,r \\[3pt]
+0 & 1
+\end{bmatrix}
+\quad,\quad
+{}^{A}\!M_{B}
+\;=\;
+\begin{bmatrix}
+E^\top & r \\[3pt]
+0 & 1
+\end{bmatrix}.
+\]
+
+In \texttt{Pinocchio}, these correspond to \(\mathrm{SE3}(E^\top, r)\) or \(\mathrm{SE3}(E, \dots)\) depending on whether you are going from \(\{A\}\to\{B\}\) or vice versa.
+
+\vspace*{1em}
+\noindent
+\textbf{Summary:}  
+The figure’s rigid transformations are precisely what \texttt{Pinocchio} implements with its \texttt{SE3} class.  The methods \texttt{.act(p)} and \texttt{.actInv(p)} (for 3D points) or the analogous \texttt{.act(motion)} for 6D motions, perform these frame conversions automatically.
+
+
+
+
+
+
+\section*{Composition of Transformations}
+
+Suppose we have two homogeneous transforms:
+\[
+{}^{A}\!M_{B}
+\;=\;
+\begin{bmatrix}
+{}^{A}\mathbf{R}_{B} & {}^{A}\mathbf{A}_{B} \\[3pt]
+\mathbf{0} & 1
+\end{bmatrix}
+\quad\text{and}\quad
+{}^{B}\!M_{C}
+\;=\;
+\begin{bmatrix}
+{}^{B}\mathbf{R}_{C} & {}^{B}\mathbf{B}_{C} \\
+\mathbf{0} & 1
+\end{bmatrix}.
+\]
+The product of these two matrices corresponds to the transformation from frame \(\{C\}\) all the way to frame \(\{A\}\).  We write:
+\[
+{}^{A}\!M_{B}\;{}^{B}\!M_{C}
+\;=\;
+{}^{A}\!M_{C}.
+\]
+
+\subsection*{Resulting Form}
+Explicitly, 
+\[
+{}^{A}\!M_{B} \;\; {}^{B}\!M_{C}
+\;=\;
+\begin{bmatrix}
+{}^{A}\mathbf{R}_{B}\;{}^{B}\mathbf{R}_{C}
+& 
+{}^{A}\mathbf{A}_{B} \;+\; {}^{A}\mathbf{R}_{B}\; {}^{B}\mathbf{B}_{C}
+\\[6pt]
+\mathbf{0} & 1
+\end{bmatrix}.
+\]
+That is, the block-matrix multiplication yields:
+\[
+{}^{A}\mathbf{R}_{C}
+\;=\;
+{}^{A}\mathbf{R}_{B}\,{}^{B}\mathbf{R}_{C}
+\quad\text{and}\quad
+{}^{A}\mathbf{A}_{C}
+\;=\;
+{}^{A}\mathbf{A}_{B} \;+\; {}^{A}\mathbf{R}_{B}\; {}^{B}\mathbf{B}_{C}.
+\]
+
+\subsection*{Inverse Composition}
+We might also consider composing \(\bigl({}^{A}\!M_{B}\bigr)^{-1}\) with another transform \({}^{A}\!M_{C}\).  From the figure:
+\[
+{}^{A}\!M_{B}^{-1}\;\;{}^{A}\!M_{C}
+\;=\;
+\begin{bmatrix}
+({}^{A}\mathbf{R}_{B})^{T}\;{}^{A}\mathbf{R}_{C}
+&
+({}^{A}\mathbf{R}_{B})^{T}\bigl({}^{A}\mathbf{A}_{C} - {}^{A}\mathbf{A}_{B}\bigr)
+\\[4pt]
+\mathbf{0} & 1
+\end{bmatrix}.
+\]
+
+\section*{Relation to Pinocchio \texttt{SE3} Objects}
+In \texttt{Pinocchio}, each transform \({}^{A}\!M_{B}\) (from frame \(\{B\}\) to \(\{A\}\)) is stored in an \texttt{SE3} object.  The composition of two such transforms is simply:
+\[
+\texttt{M\_AB * M\_BC} = \texttt{M\_AC}.
+\]
+For example, in Python:
+\begin{lstlisting}[language=Python]
+    import pinocchio as pin
+
+    # M_AB: from frame B to frame A
+    # M_BC: from frame C to frame B
+    M_AC = M_AB * M_BC  # yields from frame C to frame A
+\end{lstlisting}
+
+
+
+
+
+\section*{SE(3) and Motion in Pinocchio}
+
+This document explains how Pinocchio handles the transformation of 6D motion vectors in Python. We will describe the relevant functions, their inputs and outputs, and how they correspond to the transformation matrices in Featherstone-style spatial algebra.
+
+\subsection*{Equations}
+In Pinocchio, a \emph{motion} is represented as a 6D vector, usually referred to as \( \nu \). By convention, Pinocchio stores the angular part in the first three components and the linear part in the last three components:
+
+\[
+\nu =
+\begin{bmatrix}
+\boldsymbol{v} \\
+\boldsymbol{\omega}
+\end{bmatrix},
+\]
+
+where \(\boldsymbol{\omega} \in \mathbb{R}^3\) is the angular velocity and \(\mathbf{v} \in \mathbb{R}^3\) is the linear velocity.
+
+A rigid-body transformation in Pinocchio is an instance of the class \texttt{pinocchio.SE3}, which represents an element of the \(\mathrm{SE}(3)\) group (the space of 3D rotations and translations). Mathematically, an element of \(\mathrm{SE}(3)\) is defined by:
+
+\[
+\mathbf{M} =
+\begin{pmatrix}
+\mathbf{R} & \mathbf{p} \\
+\mathbf{0} & 1
+\end{pmatrix},
+\]
+
+where \(\mathbf{R} \in \mathrm{SO}(3)\) is a \(3\times3\) rotation matrix and \(\mathbf{p} \in \mathbb{R}^3\) is a translation vector.
+
+In spatial algebra, a \(6\times6\) \emph{motion-transform matrix} associated with \(\mathbf{M}\) applies to motion vectors and is often written as:
+
+\[
+\mathbf{X}(\mathbf{M}) =
+\begin{bmatrix}
+\mathbf{R} & [\mathbf{p}] \times \, \mathbf{R} \\
+\mathbf{0} & \mathbf{R}
+\end{bmatrix},
+\]
+
+where \([\mathbf{p}]\) is the skew-symmetric matrix corresponding to the cross-product by \(\mathbf{p}\). In Featherstone's notation, you might see it in block form as:
+
+\[
+\mathbf{X}(\mathbf{M})^{-1} =
+\begin{bmatrix}
+\mathbf{R}^{T} & -\mathbf{R}^T [\mathbf{p}] \\
+\mathbf{0} & \mathbf{R}^{T}
+\end{bmatrix}
+\]
+
+depending on convention (signs can differ based on frames and definitions).
+
+\subsection*{2. Pinocchio Functions}
+
+\subsubsection*{2.1 \texttt{SE3} Construction}
+
+You first create an SE(3) object (a rigid transform) in Python using:
+
+\begin{lstlisting}[language=Python]
+import pinocchio
+import numpy as np
+
+R = np.eye(3)        # 3x3 rotation matrix
+p = np.array([0,0,0])# 3D translation vector
+M = pinocchio.SE3(R, p)
+\end{lstlisting}
+
+\begin{itemize}
+  \item \textbf{Input}:
+    \begin{itemize}
+      \item \texttt{R}: A \(3\times3\) \texttt{numpy.ndarray} (rotation matrix).
+      \item \texttt{p}: A 3-element \texttt{numpy.ndarray} (translation).
+    \end{itemize}
+  \item \textbf{Output}: 
+    \begin{itemize}
+      \item \texttt{M}: A \texttt{pinocchio.SE3} object containing the rotation \(\mathbf{R}\) and translation \(\mathbf{p}\).
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{2.2 \texttt{M.toActionMatrix()}}
+
+This function computes the \(6\times6\) adjoint matrix that transforms a motion vector expressed in the \emph{local} frame of \texttt{M} to the motion vector expressed in the \emph{world} frame (or parent frame). Formally:
+
+\[
+\mathbf{X} = M.\text{toActionMatrix()} \in \mathbb{R}^{6\times 6},
+\]
+
+so that if \(\nu_{\text{local}} \in \mathbb{R}^6\) is the motion in \texttt{M}'s local coordinate system, then
+
+\[
+\nu_{\text{world}} = \mathbf{X}\,\nu_{\text{local}}.
+\]
+
+\begin{itemize}
+  \item \textbf{Input}: (none) --- it uses the internally stored \(\mathbf{R}\) and \(\mathbf{p}\) in \texttt{M}.
+  \item \textbf{Output}: A \texttt{numpy.ndarray} of shape \((6,6)\).
+\end{itemize}
+
+Example usage:
+\begin{lstlisting}[language=Python]
+A = M.toActionMatrix()  # 6x6 numpy array
+\end{lstlisting}
+
+\subsubsection*{2.3 \texttt{M.toActionMatrixInverse()}}
+
+This function returns the inverse of the \(6\times6\) action matrix, i.e., it transforms a motion vector from the \emph{world} frame back to the \emph{local} frame:
+
+\[
+\mathbf{X}^{-1} = M.\text{toActionMatrixInverse()}
+\quad \text{such that} \quad
+\nu_{\text{local}} = \mathbf{X}^{-1} \,\nu_{\text{world}}.
+\]
+
+\begin{itemize}
+  \item \textbf{Input}: (none) --- again uses \texttt{M}.
+  \item \textbf{Output}: A \texttt{numpy.ndarray} of shape \((6,6)\).
+\end{itemize}
+
+Example usage:
+\begin{lstlisting}[language=Python]
+A_inv = M.toActionMatrixInverse()
+\end{lstlisting}
+
+\subsubsection*{2.4 \texttt{M.act(motion)}}
+
+Rather than explicitly forming the \(6\times6\) matrix, Pinocchio also provides an operator that acts directly on 6D motion objects. If \texttt{v} is an instance of \texttt{pinocchio.Motion}, then
+
+\[
+\text{act}(\mathbf{v}) = M.\text{act}(\mathbf{v}),
+\]
+
+producing a new \texttt{pinocchio.Motion} that is the motion vector expressed in the parent frame. Internally, this is equivalent to multiplying by the \(6\times6\) matrix from \texttt{M.toActionMatrix()}.
+
+\begin{itemize}
+  \item \textbf{Input}:
+    \begin{itemize}
+      \item \texttt{v}: A \texttt{pinocchio.Motion} object (6D motion).
+    \end{itemize}
+  \item \textbf{Output}:
+    \begin{itemize}
+      \item A new \texttt{pinocchio.Motion}, transformed into the coordinate frame of \texttt{M}.
+    \end{itemize}
+\end{itemize}
+
+Example usage:
+\begin{lstlisting}[language=Python]
+v_local = pinocchio.Motion(np.array([0,0,0,  1,2,3]))
+v_world = M.act(v_local)
+\end{lstlisting}
+
+\subsubsection*{2.5 \texttt{M.actInv(motion)}}
+
+Similarly, \texttt{M.actInv(motion)} applies the \emph{inverse} transformation to a motion vector. Conceptually:
+
+\[
+\text{actInv}(\mathbf{v}) = M.\text{actInv}(\mathbf{v}),
+\]
+
+which is the motion in the local frame if \(\mathbf{v}\) was originally expressed in the parent frame. Internally, it is equivalent to multiplying by \texttt{M.toActionMatrixInverse()}.
+
+\begin{itemize}
+  \item \textbf{Input}:
+    \begin{itemize}
+      \item \texttt{v}: A \texttt{pinocchio.Motion} object (6D motion in the parent/world frame).
+    \end{itemize}
+  \item \textbf{Output}:
+    \begin{itemize}
+      \item A new \texttt{pinocchio.Motion}, transformed into \texttt{M}'s local frame.
+    \end{itemize}
+\end{itemize}
+
+Example usage:
+\begin{lstlisting}[language=Python]
+v_world = pinocchio.Motion(np.array([0,0,0,  1,2,3]))
+v_local = M.actInv(v_world)
+\end{lstlisting}
+
+\subsection*{Example: Computing the $6\times6$ Matrix and Applying It}
+
+Below is a short snippet showing how to create an SE3 transform, get its \(6\times6\) action matrix, and multiply it by a raw \(6\times1\) motion vector:
+
+\begin{lstlisting}[language=Python]
+import pinocchio
+import numpy as np
+
+# Example rotation and translation
+R = np.eye(3)
+p = np.array([1.0, 2.0, 3.0])
+
+# Create the SE3 object
+M = pinocchio.SE3(R, p)
+
+# A 6D motion vector in M's local frame
+v_local = np.array([0.1, 0.2, 0.3,  1.0, 2.0, 3.0])  # [omega, v]
+
+# 1) Compute the 6x6 matrix
+A = M.toActionMatrix()
+
+# 2) Transform the motion to the world frame
+v_world = A @ v_local
+
+print("The 6x6 action matrix A:\n", A)
+print("Motion in world frame:\n", v_world)
+\end{lstlisting}
+
+Alternatively, you can avoid explicit matrix multiplication by using Pinocchio's \texttt{Motion} class and the \texttt{.act()} method:
+
+\begin{lstlisting}[language=Python]
+# Pinocchio motion object
+v_local_motion = pinocchio.Motion(v_local)  # pass a 6D numpy array
+
+# Apply the transform directly
+v_world_motion = M.act(v_local_motion)
+
+print("v_world from act() =", v_world_motion.vector)
+\end{lstlisting}
+
+
+\section*{Spatial Force Vectors}
+
+A spatial force (wrench) in frame \(A\) can be written as:
+\[
+{}^{A}\!\boldsymbol{\phi}
+\;=\;
+\begin{bmatrix}
+{}^{A}\mathbf{f}\\[4pt]
+{}^{A}\boldsymbol{\tau}
+\end{bmatrix},
+\]
+where \({}^{A}\mathbf{f}\in\mathbb{R}^3\) is the linear force component and \({}^{A}\boldsymbol{\tau}\in\mathbb{R}^3\) is the torque (moment) component, both expressed in the coordinate frame \(\{A\}\).
+
+\subsection*{2.\,Transformation of a Force}
+
+If we wish to express the same physical force in another coordinate frame \(\{B\}\), the spatial force transforms via a \(6\times6\) matrix often denoted by \({}^B\!X^{*}_A\).  The relationship is:
+
+\[
+{}^{B}\!\boldsymbol{\phi}
+\;=\;
+{}^{B}\!X^{*}_A\;\;{}^{A}\!\boldsymbol{\phi}.
+\]
+
+\subsection*{2.1 Derivation via Duality}
+
+One way to see this is by recognizing that the inner product \(\boldsymbol{\phi}^\top \boldsymbol{\nu}\) (force dotted with velocity) is invariant under change of reference frame.  For spatial motions,
+\[
+{}^{B}\boldsymbol{\nu}
+\;=\;
+{}^{B}X_A \;\;{}^{A}\!\boldsymbol{\nu},
+\]
+where \({}^{B}X_A\) is the motion-transform matrix.  The invariance of \(\boldsymbol{\phi}^\top \boldsymbol{\nu}\) implies:
+\[
+({}^{B}\!\boldsymbol{\phi})^\top ({}^{B}\boldsymbol{\nu})
+\;=\;
+({}^{A}\!\boldsymbol{\phi})^\top ({}^{A}\boldsymbol{\nu})
+\quad\Longrightarrow\quad
+{}^{A}\!X^{*}_B
+\;=\;
+\bigl({}^{A}X_B\bigr)^{-T}.
+\]
+Notice that $\bigl({}^{A}X_B\bigr)^{-T} \neq \bigl({}^{A}X_B\bigr)$
+
+Hence the force transform is the inverse transpose of the motion transform.
+
+\subsection*{3.\,Block-Matrix Form}
+
+Given a homogeneous transform
+\[
+{}^{A}\!M_{B}
+\;=\;
+\begin{bmatrix}
+{}^{A}\mathbf{R}_{B} & {}^{A}\mathbf{A}_{B}\\[3pt]
+\mathbf{0} & 1
+\end{bmatrix},
+\]
+the motion-transform matrix is
+\[
+{}^{A}X_{B}
+\;=\;
+\begin{bmatrix}
+{}^{A}\mathbf{R}_{B} & \bigl({}^{A}\mathbf{A}_{B}\bigr)_\times\,{}^{A}\mathbf{R}_{B}\\[3pt]
+\mathbf{0} & {}^{A}\mathbf{R}_{B}
+\end{bmatrix},
+\]
+and the corresponding \emph{force}-transform matrix becomes
+\[
+{}^{A}X^{*}_{B}
+\;=\;
+\bigl({}^{A}X_{B}\bigr)^{-T}
+\;=\;
+\begin{bmatrix}
+{}^{A}\mathbf{R}_{B} & \mathbf{0}\\[3pt]
+\bigl({}^{A}\mathbf{A}_{B}\bigr)_\times\,{}^{A}\mathbf{R}_{B} & {}^{A}\mathbf{R}_{B}
+\end{bmatrix}.
+\]
+Hence,
+\[
+{}^{B}\!\boldsymbol{\phi}
+\;=\;
+{}^{B}X^{*}_{A}\;\;{}^{A}\!\boldsymbol{\phi}
+,\quad
+\text{with}
+\quad
+{}^{B}X^{*}_{A}
+\;=\;
+\begin{bmatrix}
+({}^{A}\mathbf{R}_{B})^T & \mathbf{0}\\[4pt]
+-\,({}^{A}\mathbf{R}_{B})^T\,({}^{A}\mathbf{A}_{B})_\times \;\;\; & \;({}^{A}\mathbf{R}_{B})^T
+\end{bmatrix}.
+\]
+
+\subsection*{3.1 Featherstone's \((E,r)\) Notation}
+Following Featherstone, one sometimes sets
+\[
+E \;=\; {}^{B}\mathbf{R}_{A} \;=\; ({}^{A}\mathbf{R}_{B})^Tp,
+\quad
+r \;=\; {}^{A}\mathbf{A}_{B}.
+\]
+Then,
+\[
+{}^{B}X^{*}_{A}
+\;=\;
+\begin{bmatrix}
+E & 0 \\[3pt]
+-\,E\,r_\times & E
+\end{bmatrix},
+\qquad
+{}^{A}X^{*}_{B}
+\;=\;
+\begin{bmatrix}
+E^T & 0\\[3pt]
+r_\times\,E^T & E^T
+\end{bmatrix}.
+\]
+
+\subsection*{Usage in Pinocchio}
+
+In Pinocchio’s Python API, the \texttt{SE3} class also knows how to transform a \texttt{Force} object correctly.  If \(\texttt{F\_A}\) is a \texttt{pinocchio.Force} expressed in frame \(A\), and \(\texttt{M\_AB}\) is the \texttt{SE3} transform from \(B\) to \(A\), then the force in frame \(B\) is:
+
+\begin{lstlisting}[language=Python]
+F_B = M_AB.act(F_A)
+\end{lstlisting}
+
+Behind the scenes, Pinocchio applies the force-transform matrix \({}^B X_A^*\).  Similarly,
+
+\begin{lstlisting}[language=Python]
+F_A2 = M_AB.actInv(F_B)
+\end{lstlisting}
+
+applies the inverse of the dual transform.
+
+
+
+
+
+
+
+
+\end{document}
